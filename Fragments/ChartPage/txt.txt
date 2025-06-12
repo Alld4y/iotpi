@@ -1,0 +1,180 @@
+import { View,StyleSheet,TouchableOpacity,Text,FlatList, BackHandler } from "react-native"
+import { colors } from "../../assets/String/colors"
+import { mainStyle } from "../MainPage/MainPage"
+import Icon from 'react-native-vector-icons/FontAwesome';
+import HrTag from "../../SharedComponent/HrTag";
+import ChartPageInputDialog from "./ChartPageInputDialog";
+import { useEffect, useState , useContext,useRef } from "react";
+import Bar from "../../SharedComponent/Bar";
+import PieChartDemo from "../../SharedComponent/PieChartDemo";
+import { DataContext } from "../..";
+import Orientation from "react-native-orientation-locker";
+import { url } from "../../assets/String/link";
+
+export default function ChartPage(props: any){
+
+    const [showChartPageInputDialog,setShowChartPageInputDialog]=useState(false);
+    const [showAddChart,setShowAddChart]=useState(true);
+    const [render,setRender] = useState(true)
+    const {loadPieChart} = useContext(DataContext)
+    const [subscribePie,setSubscribePie] = useState({});
+    const [userChartData,setUserChartData] = useState([])
+
+
+  const ws: any = useRef(null);
+  const uuid = props.uid;
+  const connectWebSocket = () => {
+    
+    if (ws.current) {
+      if (ws.current.readyState === 1) {
+          console.log("WebSocket is already open");
+          return; // ถ้าเชื่อมต่ออยู่แล้ว ไม่ต้องทำซ้ำ
+      }else{
+        console.warn('WebSocket is not ready')
+      }
+     
+
+      ws.current.close(); // ปิดการเชื่อมต่อเก่าถ้ามี
+    }
+    console.log("ws.current --> ", ws.current);
+
+    if(uuid) {
+      ws.current = new WebSocket(url.webSocketUrl);
+
+      ws.current.onopen = () => {
+          console.log('Connected to WebSocket Server');
+          ws.current.send(JSON.stringify({connectId: uuid }));
+      };
+
+      ws.current.onmessage = (event: any) => {
+          const message = JSON.parse(event.data);
+          console.log('Received message:', message);
+         
+          if(message.action === "loadPieChartResponse"){
+            console.log(message.res)
+            const res = JSON.parse(message.res[0].chartData);
+            const resArray = Object.values(res);
+            console.log("resArray ", resArray);
+            const colorPriority = ["pink", "purple", "blue","green","orange"];
+            const groupedPinData: any = resArray.reduce((acc: any, item: any) => {
+              if (!acc[item.color]) {
+                acc[item.color] = [];
+              }
+              acc[item.color].push(item);
+              return acc;
+            }, {});
+            
+            // จัดลำดับการแสดงผลตามลำดับสีที่ต้องการ
+            const sortedPinData: any = colorPriority
+              .map((color) => groupedPinData[color] || []) // จัดกลุ่มตามสีในลำดับที่ต้องการ
+              .flat(); // แปลงเป็น Array เดียว
+            
+            //console.log(sortedPinData);
+            setUserChartData(sortedPinData);
+          }
+          if(message.mqtt === "sensorSubscriber" && message.chartId && message.payload ){
+           // console.log("Chart ID : " , message.chartId);
+           // console.log("Payload : " , message.payload);
+            const data = {
+              chartId: String(message.chartId),
+              payload: Number(message.payload)
+            }
+           // console.log(data)
+            setSubscribePie(data)
+          }
+
+
+      };
+
+      ws.current.onclose = () => {
+          console.log('Connection from WebSocket server closed');
+      };
+
+      ws.current.onerror = (err: Error) => {
+          console.warn('WebSocket Error : ', err.message);
+      };
+
+      return () => {
+          if (ws.current) {
+              ws.current.close();
+          }
+      };
+  } else {
+      console.log('uid not found');
+  }
+  }
+
+    const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        props.onBackPress
+      );
+
+
+    useEffect(() => {
+        Orientation.lockToPortrait();
+        return () => {
+            Orientation.unlockAllOrientations();
+        };
+    }, []);
+
+    useEffect(()=>{
+        const loadPieChart = () => {
+            if(ws.current){
+              ws.current.send(JSON.stringify({action:"loadPieChart", connectId:uuid}));
+            }
+          }
+        loadPieChart();
+    },[render])
+
+    
+
+    return (
+        <View style={{flex:1,width:"100%"}}>
+            <View style={chartStyle.container}>
+            <View style={chartStyle.field}>
+
+            <View style={{marginTop:10}}>
+                <FlatList data={userChartData} 
+                renderItem={({item})=>(<PieChartDemo userChartData={item}/>)} 
+                keyExtractor={(item:any)=>item.id.toString()} 
+                ListFooterComponent= {<View>
+                    <HrTag />
+        
+                        <View style={[mainStyle.addBtnContainer,{marginBottom:20}]}>
+                        <TouchableOpacity style={mainStyle.addBtn} onPress={()=>{setShowChartPageInputDialog(true); props.fadeBackground(true);}}>
+                        <Icon name="plus" size={25} color={colors.lightYellow}></Icon>
+                        </TouchableOpacity>
+                            
+                        <Text style={mainStyle.text}>   Add New Bar</Text>
+        
+                        </View>
+                    </View>}
+                >    
+                </FlatList>
+            </View>
+
+            
+            </View>
+        </View>
+
+{showChartPageInputDialog && <ChartPageInputDialog onAddPinSubmit={()=>{setShowChartPageInputDialog(false); props.fadeBackground(false);}} onBackPress={()=>{setShowChartPageInputDialog(false); props.fadeBackground(false); return true;}} onSubmit={()=>{setRender(prev=>!prev);}}/>}
+        </View>
+    )
+}
+
+
+const chartStyle = StyleSheet.create({
+    container:{
+        backgroundColor:colors.mainYellow,
+        flex:1,
+        width:"100%",
+        justifyContent:"flex-end"
+    },
+    field:{
+        backgroundColor: colors.white,
+        width:"100%",
+        height:"90%",
+        borderTopLeftRadius:15,
+        borderTopRightRadius:15,
+    }
+})

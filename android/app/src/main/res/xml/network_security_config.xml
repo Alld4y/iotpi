@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.0.229</domain> <!-- ใช้ IP ของเซิร์ฟเวอร์คุณ -->
+        <domain includeSubdomains="true">192.168.0.73</domain>
+        <domain includeSubdomains="true">alldaygrow.tplinkdns.com</domain>
+    </domain-config>
+</network-security-config>

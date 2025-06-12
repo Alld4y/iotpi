@@ -1,0 +1,117 @@
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { View } from 'react-native';
+export default function ArrowButtonLayout() {
+  const tap = Gesture.LongPress().minDuration(0).onStart(()=>{console.log("Tap");}).onEnd(()=>{console.log("End Tap")});
+
+  return (
+    <GestureDetector gesture={tap}>
+      <View style={{height:50,width:50,backgroundColor:"pink"}}>
+
+    </View>
+    </GestureDetector>
+  );
+}
+
+
+import { View,StyleSheet, Pressable } from "react-native";
+import { colors } from "../../assets/String/colors";
+import { useState,useReducer } from "react";
+
+const containerSize = 231 
+const layoutPosition = {
+    rightAnalogBottom: 35,
+    rightAnalogRight: 50,
+}
+const borderWidthValue = 5
+
+const initialState = { up: "transparent" , down: "transparent", left: "transparent", right: "transparent" };
+
+function reducer(
+    state: { up: string; down: string; left: string; right: string },
+    action: { type: string }
+) {
+    switch (action.type) {
+        case 'up':
+            return { ...state, up: colors.opacityYellow };
+        case 'down':
+            return { ...state, down: colors.opacityYellow };
+        case 'left':
+            return { ...state, left: colors.opacityYellow };
+        case 'right':
+            return { ...state, right: colors.opacityYellow };
+        case 'false':
+            return { ...state, up: "transparent", down: "transparent", left: "transparent", right: "transparent"};
+         default:
+            throw new Error(`Unknown action type: ${action.type}`);
+    }
+}
+export default function ArrowButtonLayout(){
+    let buttonColor: string = "transparent";
+
+    const [state,dispatch] = useReducer(reducer,initialState);
+
+    if(state.up===colors.opacityYellow){
+        console.log("UP Pressed")
+    }else{
+        console.log("off")
+    }
+
+    return (
+        <View style={joyStyle.container}>
+            <View style={[joyStyle.box,{ borderTopStartRadius:15,borderTopRightRadius:15,borderBottomWidth:0}]}>
+                <Pressable onTouchStart={()=>{dispatch({type: 'up'})}}
+                            onTouchEnd={()=>{dispatch({type: 'false'})}}
+                            >
+                        <View style={{backgroundColor: state.up ,height:(containerSize/3)-10,borderRadius:10}}></View>
+                </Pressable>
+            </View>
+            <View style={{flexDirection:"row"}}>
+                <View style={[joyStyle.box,{borderTopStartRadius:15,borderBottomLeftRadius:15,borderEndWidth:0}]}>
+                <Pressable onTouchStart={()=>{dispatch({type: 'left'})}}
+                            onTouchEnd={()=>{dispatch({type: 'false'})}}
+                            >
+                        <View style={{backgroundColor: state.left ,height:(containerSize/3)-10,borderRadius:10}}></View>
+                </Pressable>
+                </View>
+                <View style={{borderWidth:0,height:66,width:66}}></View>
+                <View style={[joyStyle.box,{borderTopEndRadius:15,borderBottomRightRadius:15,borderStartWidth:0}]}>
+                <Pressable onTouchStart={()=>{dispatch({type: 'right'})}}
+                            onTouchEnd={()=>{dispatch({type: 'false'})}}
+                            >
+                        <View style={{backgroundColor: state.right ,height:(containerSize/3)-10,borderRadius:10}}></View>
+                </Pressable>
+                </View>
+            </View>
+            <View style={[joyStyle.box,{height:containerSize/3.3,borderBottomStartRadius:15,borderBottomRightRadius:15,borderTopWidth:0}]}>
+            <Pressable onTouchStart={()=>{dispatch({type: 'down'})}}
+                            onTouchEnd={()=>{dispatch({type: 'false'})}}
+                            >
+                        <View style={{backgroundColor: state.down ,height:(containerSize/3)-10,borderRadius:10}}></View>
+                </Pressable></View>
+
+        </View>
+    )
+}
+
+const joyStyle = StyleSheet.create({
+    container:{
+        width:containerSize,
+        height:containerSize,
+        backgroundColor:"transparent", 
+        position:"absolute",
+        bottom:layoutPosition.rightAnalogBottom,
+        right:layoutPosition.rightAnalogRight,
+        justifyContent:"center",
+        alignItems:"center",
+    },
+    box:{
+        height:66,
+        width:66,
+        backgroundColor:"transparent",
+        borderStyle:"solid",
+        borderColor:colors.grey,
+        borderWidth:2,
+        justifyContent:"center",
+    }
+
+})
